@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ILR Level Predictor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 48px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 32px 64px rgba(0, 0, 0, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .container:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.16);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+            font-weight: 400;
+        }
+
+        .input-group {
+            margin-bottom: 32px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 12px;
+            font-size: 1rem;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 16px;
+            font-size: 16px;
+            font-family: inherit;
+            line-height: 1.6;
+            resize: vertical;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea::placeholder {
+            color: #9ca3af;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 32px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+            min-width: 140px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-container {
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+            border: 2px solid #0ea5e9;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            display: none;
+            animation: slideIn 0.5s ease;
+        }
+
+        .result-container.show {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-label {
+            font-size: 1rem;
+            color: #0369a1;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .result-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0c4a6e;
+            margin-bottom: 8px;
+        }
+
+        .result-description {
+            font-size: 0.9rem;
+            color: #0369a1;
+            opacity: 0.8;
+        }
+
+        .error-container {
+            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+            border: 2px solid #ef4444;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            display: none;
+            animation: slideIn 0.5s ease;
+        }
+
+        .error-container.show {
+            display: block;
+        }
+
+        .error-text {
+            color: #dc2626;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 32px 24px;
+                margin: 16px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            textarea {
+                min-height: 150px;
+                padding: 16px;
+            }
+
+            button {
+                padding: 14px 28px;
+                font-size: 15px;
+            }
+        }
+
+        .char-counter {
+            text-align: right;
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 8px;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 32px;
+            padding-top: 32px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .feature {
+            text-align: center;
+            padding: 16px;
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            color: white;
+            font-size: 20px;
+        }
+
+        .feature-title {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 4px;
+        }
+
+        .feature-desc {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ILR Level Predictor</h1>
+        <p class="subtitle">Analyze text complexity and predict Interagency Language Roundtable proficiency levels</p>
+        
+        <div class="input-group">
+            <label for="inputText">Enter your text for analysis</label>
+            <textarea 
+                id="inputText" 
+                placeholder="Paste or type your text here to analyze its complexity and predict the required ILR proficiency level..."
+                oninput="updateCharCounter()"
+            ></textarea>
+            <div class="char-counter" id="charCounter">0 characters</div>
+        </div>
+
+        <div class="button-container">
+            <button onclick="sendText()" id="predictBtn">
+                <span class="button-text">Analyze Text</span>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <span>Analyzing...</span>
+                </div>
+            </button>
+        </div>
+
+        <div class="result-container" id="resultContainer">
+            <div class="result-label">Predicted ILR Level</div>
+            <div class="result-value" id="resultValue">-</div>
+            <div class="result-description" id="resultDescription">Professional working proficiency</div>
+        </div>
+
+        <div class="error-container" id="errorContainer">
+            <div class="error-text" id="errorText">An error occurred while analyzing the text.</div>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">🎯</div>
+                <div class="feature-title">Accurate Analysis</div>
+                <div class="feature-desc">Advanced algorithms for precise ILR level prediction</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <div class="feature-title">Instant Results</div>
+                <div class="feature-desc">Get immediate feedback on text complexity</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📊</div>
+                <div class="feature-title">Professional Standards</div>
+                <div class="feature-desc">Based on official ILR proficiency guidelines</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateCharCounter() {
+            const text = document.getElementById("inputText").value;
+            const counter = document.getElementById("charCounter");
+            counter.textContent = `${text.length} characters`;
+        }
+
+        function showLoading(show) {
+            const button = document.getElementById("predictBtn");
+            const buttonText = button.querySelector(".button-text");
+            const loading = document.getElementById("loading");
+            
+            if (show) {
+                buttonText.style.display = "none";
+                loading.style.display = "flex";
+                button.disabled = true;
+            } else {
+                buttonText.style.display = "inline";
+                loading.style.display = "none";
+                button.disabled = false;
+            }
+        }
+
+        function showResult(level) {
+            const resultContainer = document.getElementById("resultContainer");
+            const resultValue = document.getElementById("resultValue");
+            const resultDescription = document.getElementById("resultDescription");
+            const errorContainer = document.getElementById("errorContainer");
+            
+            // Hide error container
+            errorContainer.classList.remove("show");
+            
+            // Update result
+            resultValue.textContent = level;
+            
+            // Add description based on level
+            const descriptions = {
+                "0": "No functional ability",
+                "0+": "Memorized proficiency",
+                "1": "Elementary proficiency",
+                "1+": "Elementary proficiency plus",
+                "2": "Limited working proficiency",
+                "2+": "Limited working proficiency plus",
+                "3": "Professional working proficiency",
+                "3+": "Professional working proficiency plus",
+                "4": "Full professional proficiency",
+                "4+": "Full professional proficiency plus",
+                "5": "Native or bilingual proficiency"
+            };
+            
+            resultDescription.textContent = descriptions[level] || "Professional working proficiency";
+            
+            // Show result
+            resultContainer.classList.add("show");
+        }
+
+        function showError(message) {
+            const errorContainer = document.getElementById("errorContainer");
+            const errorText = document.getElementById("errorText");
+            const resultContainer = document.getElementById("resultContainer");
+            
+            // Hide result container
+            resultContainer.classList.remove("show");
+            
+            // Update and show error
+            errorText.textContent = message;
+            errorContainer.classList.add("show");
+        }
+
+        async function sendText() {
+            const text = document.getElementById("inputText").value.trim();
+            
+            if (!text) {
+                showError("Please enter some text to analyze.");
+                return;
+            }
+            
+            showLoading(true);
+            
+            try {
+                const res = await fetch("/predict", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ text })
+                });
+                
+                if (!res.ok) {
+                    throw new Error(`Server error: ${res.status}`);
+                }
+                
+                const data = await res.json();
+                showResult(data.predicted_ilr);
+                
+            } catch (error) {
+                console.error("Error:", error);
+                showError("Failed to analyze text. Please try again.");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Allow Enter key to submit (with Ctrl/Cmd)
+        document.getElementById("inputText").addEventListener("keydown", function(event) {
+            if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+                event.preventDefault();
+                sendText();
+            }
+        });
+    </script>
+</body>
+</html>
