@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ILR Level Predictor</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -16,59 +17,91 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             padding: 20px;
         }
 
-        .container {
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ffffff, #f8fafc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .header .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2rem;
+            font-weight: 400;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            align-items: start;
+        }
+
+        .input-section, .results-section {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
             border-radius: 24px;
-            padding: 48px;
-            max-width: 800px;
-            width: 100%;
+            padding: 40px;
             box-shadow: 0 32px 64px rgba(0, 0, 0, 0.12);
             border: 1px solid rgba(255, 255, 255, 0.2);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
-        .container:hover {
+        .input-section:hover, .results-section:hover {
             transform: translateY(-4px);
             box-shadow: 0 40px 80px rgba(0, 0, 0, 0.16);
         }
 
-        h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-align: center;
-            margin-bottom: 12px;
-            letter-spacing: -0.02em;
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        .subtitle {
-            text-align: center;
-            color: #64748b;
-            font-size: 1.1rem;
-            margin-bottom: 40px;
-            font-weight: 400;
+        .section-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
         }
 
         .input-group {
-            margin-bottom: 32px;
+            margin-bottom: 24px;
         }
 
         label {
             display: block;
-            font-weight: 600;
+            font-weight: 500;
             color: #374151;
-            margin-bottom: 12px;
-            font-size: 1rem;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
         }
 
         textarea {
@@ -96,13 +129,14 @@
             color: #9ca3af;
         }
 
-        .button-container {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 32px;
+        .char-counter {
+            text-align: right;
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 8px;
         }
 
-        button {
+        .submit-btn {
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
             border: none;
@@ -113,21 +147,21 @@
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
-            min-width: 140px;
+            width: 100%;
             position: relative;
             overflow: hidden;
         }
 
-        button:hover {
+        .submit-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 12px 32px rgba(102, 126, 234, 0.4);
         }
 
-        button:active {
+        .submit-btn:active {
             transform: translateY(0);
         }
 
-        button:disabled {
+        .submit-btn:disabled {
             opacity: 0.7;
             cursor: not-allowed;
             transform: none;
@@ -154,17 +188,18 @@
             100% { transform: rotate(360deg); }
         }
 
-        .result-container {
+        .prediction-result {
             background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
             border: 2px solid #0ea5e9;
             border-radius: 16px;
             padding: 24px;
             text-align: center;
+            margin-bottom: 32px;
             display: none;
             animation: slideIn 0.5s ease;
         }
 
-        .result-container.show {
+        .prediction-result.show {
             display: block;
         }
 
@@ -187,7 +222,7 @@
         }
 
         .result-value {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 700;
             color: #0c4a6e;
             margin-bottom: 8px;
@@ -197,6 +232,27 @@
             font-size: 0.9rem;
             color: #0369a1;
             opacity: 0.8;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+            display: none;
+        }
+
+        .chart-container.show {
+            display: block;
+            animation: slideIn 0.5s ease 0.2s both;
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 16px;
+            text-align: center;
         }
 
         .error-container {
@@ -218,123 +274,188 @@
             font-weight: 500;
         }
 
-        @media (max-width: 768px) {
-            .container {
-                padding: 32px 24px;
-                margin: 16px;
-            }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #e5e7eb;
+        }
 
-            h1 {
+        .feature-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: transform 0.2s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-2px);
+            background: #f1f5f9;
+        }
+
+        .feature-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+
+        .feature-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        @media (max-width: 1024px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+            
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .input-section, .results-section {
+                padding: 32px 24px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 0 16px;
+            }
+            
+            .header h1 {
                 font-size: 2rem;
             }
-
+            
+            .header .subtitle {
+                font-size: 1rem;
+            }
+            
+            .input-section, .results-section {
+                padding: 24px 20px;
+            }
+            
             textarea {
                 min-height: 150px;
                 padding: 16px;
             }
-
-            button {
-                padding: 14px 28px;
-                font-size: 15px;
+            
+            .features-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 12px;
             }
         }
 
-        .char-counter {
-            text-align: right;
-            font-size: 0.875rem;
-            color: #6b7280;
-            margin-top: 8px;
-        }
-
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
+        .insights-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
             margin-top: 32px;
-            padding-top: 32px;
-            border-top: 1px solid #e5e7eb;
+            box-shadow: 0 32px 64px rgba(0, 0, 0, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .feature {
-            text-align: center;
-            padding: 16px;
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 24px;
         }
 
-        .feature-icon {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 12px;
-            color: white;
-            font-size: 20px;
+        .insight-card {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            border-radius: 16px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
         }
 
-        .feature-title {
+        .insight-title {
             font-weight: 600;
-            color: #374151;
-            margin-bottom: 4px;
+            color: #1f2937;
+            margin-bottom: 8px;
         }
 
-        .feature-desc {
-            font-size: 0.875rem;
-            color: #6b7280;
+        .insight-desc {
+            font-size: 0.9rem;
+            color: #64748b;
+            line-height: 1.5;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>ILR Level Predictor</h1>
-        <p class="subtitle">Analyze text complexity and predict Interagency Language Roundtable proficiency levels</p>
-        
-        <div class="input-group">
-            <label for="inputText">Enter your text for analysis</label>
-            <textarea 
-                id="inputText" 
-                placeholder="Paste or type your text here to analyze its complexity and predict the required ILR proficiency level..."
-                oninput="updateCharCounter()"
-            ></textarea>
-            <div class="char-counter" id="charCounter">0 characters</div>
+    <div class="main-container">
+        <div class="header">
+            <h1>ILR Level Predictor</h1>
+            <p class="subtitle">Advanced linguistic analysis with feature visualization</p>
         </div>
 
-        <div class="button-container">
-            <button onclick="sendText()" id="predictBtn">
-                <span class="button-text">Analyze Text</span>
-                <div class="loading" id="loading">
-                    <div class="spinner"></div>
-                    <span>Analyzing...</span>
+        <div class="content-grid">
+            <div class="input-section">
+                <div class="section-title">
+                    <div class="section-icon">📝</div>
+                    Text Analysis
                 </div>
-            </button>
-        </div>
+                
+                <div class="input-group">
+                    <label for="inputText">Enter your text for analysis</label>
+                    <textarea 
+                        id="inputText" 
+                        placeholder="Paste or type your text here to analyze its complexity and predict the required ILR proficiency level..."
+                        oninput="updateCharCounter()"
+                    ></textarea>
+                    <div class="char-counter" id="charCounter">0 characters</div>
+                </div>
 
-        <div class="result-container" id="resultContainer">
-            <div class="result-label">Predicted ILR Level</div>
-            <div class="result-value" id="resultValue">-</div>
-            <div class="result-description" id="resultDescription">Professional working proficiency</div>
-        </div>
-
-        <div class="error-container" id="errorContainer">
-            <div class="error-text" id="errorText">An error occurred while analyzing the text.</div>
-        </div>
-
-        <div class="features">
-            <div class="feature">
-                <div class="feature-icon">🎯</div>
-                <div class="feature-title">Accurate Analysis</div>
-                <div class="feature-desc">Advanced algorithms for precise ILR level prediction</div>
+                <button class="submit-btn" onclick="submitText()" id="submitBtn">
+                    <span class="button-text">Analyze Text</span>
+                    <div class="loading" id="loading">
+                        <div class="spinner"></div>
+                        <span>Analyzing...</span>
+                    </div>
+                </button>
             </div>
-            <div class="feature">
-                <div class="feature-icon">⚡</div>
-                <div class="feature-title">Instant Results</div>
-                <div class="feature-desc">Get immediate feedback on text complexity</div>
+
+            <div class="results-section">
+                <div class="section-title">
+                    <div class="section-icon">📊</div>
+                    Analysis Results
+                </div>
+
+                <div class="prediction-result" id="predictionResult">
+                    <div class="result-label">Predicted ILR Level</div>
+                    <div class="result-value" id="resultValue">-</div>
+                    <div class="result-description" id="resultDescription">Professional working proficiency</div>
+                </div>
+
+                <div class="chart-container" id="chartContainer">
+                    <div class="chart-title">Feature Analysis</div>
+                    <canvas id="featureChart"></canvas>
+                </div>
+
+                <div class="error-container" id="errorContainer">
+                    <div class="error-text" id="errorText">An error occurred while analyzing the text.</div>
+                </div>
+
+                <div class="features-grid" id="featuresGrid" style="display: none;">
+                    <!-- Feature cards will be populated here -->
+                </div>
             </div>
-            <div class="feature">
-                <div class="feature-icon">📊</div>
-                <div class="feature-title">Professional Standards</div>
-                <div class="feature-desc">Based on official ILR proficiency guidelines</div>
+        </div>
+
+        <div class="insights-section" id="insightsSection" style="display: none;">
+            <div class="section-title">
+                <div class="section-icon">💡</div>
+                Analysis Insights
+            </div>
+            <div class="insights-grid" id="insightsGrid">
+                <!-- Insights will be populated here -->
             </div>
         </div>
     </div>
@@ -347,7 +468,7 @@
         }
 
         function showLoading(show) {
-            const button = document.getElementById("predictBtn");
+            const button = document.getElementById("submitBtn");
             const buttonText = button.querySelector(".button-text");
             const loading = document.getElementById("loading");
             
@@ -362,11 +483,14 @@
             }
         }
 
-        function showResult(level) {
-            const resultContainer = document.getElementById("resultContainer");
+        function showResult(level, features) {
+            const predictionResult = document.getElementById("predictionResult");
             const resultValue = document.getElementById("resultValue");
             const resultDescription = document.getElementById("resultDescription");
             const errorContainer = document.getElementById("errorContainer");
+            const chartContainer = document.getElementById("chartContainer");
+            const featuresGrid = document.getElementById("featuresGrid");
+            const insightsSection = document.getElementById("insightsSection");
             
             // Hide error container
             errorContainer.classList.remove("show");
@@ -391,24 +515,105 @@
             
             resultDescription.textContent = descriptions[level] || "Professional working proficiency";
             
-            // Show result
-            resultContainer.classList.add("show");
+            // Show result and chart
+            predictionResult.classList.add("show");
+            chartContainer.classList.add("show");
+            
+            // Create feature cards
+            createFeatureCards(features);
+            featuresGrid.style.display = "grid";
+            
+            // Create insights
+            createInsights(level, features);
+            insightsSection.style.display = "block";
+        }
+
+        function createFeatureCards(features) {
+            const featuresGrid = document.getElementById("featuresGrid");
+            featuresGrid.innerHTML = "";
+            
+            Object.entries(features).forEach(([name, value]) => {
+                const card = document.createElement("div");
+                card.className = "feature-card";
+                card.innerHTML = `
+                    <div class="feature-name">${name}</div>
+                    <div class="feature-value">${typeof value === 'number' ? value.toFixed(2) : value}</div>
+                `;
+                featuresGrid.appendChild(card);
+            });
+        }
+
+        function createInsights(level, features) {
+            const insightsGrid = document.getElementById("insightsGrid");
+            insightsGrid.innerHTML = "";
+            
+            const insights = generateInsights(level, features);
+            
+            insights.forEach(insight => {
+                const card = document.createElement("div");
+                card.className = "insight-card";
+                card.innerHTML = `
+                    <div class="insight-title">${insight.title}</div>
+                    <div class="insight-desc">${insight.description}</div>
+                `;
+                insightsGrid.appendChild(card);
+            });
+        }
+
+        function generateInsights(level, features) {
+            const insights = [];
+            
+            // Complexity insight
+            if (features["Avg Sentence Length"] > 20) {
+                insights.push({
+                    title: "Complex Sentence Structure",
+                    description: "The text contains long, complex sentences that may require advanced language skills to understand."
+                });
+            }
+            
+            // Vocabulary insight
+            if (features["Type-Token Ratio"] > 0.7) {
+                insights.push({
+                    title: "Rich Vocabulary",
+                    description: "High vocabulary diversity indicates sophisticated language use and varied word choice."
+                });
+            }
+            
+            // Readability insight
+            if (features["Readability Score"] < 30) {
+                insights.push({
+                    title: "Challenging Readability",
+                    description: "Low readability score suggests the text requires advanced reading comprehension skills."
+                });
+            }
+            
+            // Level-specific insights
+            if (level >= 3) {
+                insights.push({
+                    title: "Professional Level Text",
+                    description: "This text demonstrates professional-level language complexity suitable for workplace communication."
+                });
+            }
+            
+            return insights;
         }
 
         function showError(message) {
             const errorContainer = document.getElementById("errorContainer");
             const errorText = document.getElementById("errorText");
-            const resultContainer = document.getElementById("resultContainer");
+            const predictionResult = document.getElementById("predictionResult");
+            const chartContainer = document.getElementById("chartContainer");
             
-            // Hide result container
-            resultContainer.classList.remove("show");
+            // Hide result containers
+            predictionResult.classList.remove("show");
+            chartContainer.classList.remove("show");
             
             // Update and show error
             errorText.textContent = message;
             errorContainer.classList.add("show");
         }
 
-        async function sendText() {
+        async function submitText() {
             const text = document.getElementById("inputText").value.trim();
             
             if (!text) {
@@ -419,34 +624,98 @@
             showLoading(true);
             
             try {
-                const res = await fetch("/predict", {
+                const response = await fetch("http://127.0.0.1:8000/predict", {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ text })
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text }),
                 });
                 
-                if (!res.ok) {
-                    throw new Error(`Server error: ${res.status}`);
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
                 }
                 
-                const data = await res.json();
-                showResult(data.predicted_ilr);
+                const data = await response.json();
+                
+                // Show results
+                showResult(data.predicted_ilr, data.features);
+                
+                // Create radar chart
+                createRadarChart(data.features);
                 
             } catch (error) {
                 console.error("Error:", error);
-                showError("Failed to analyze text. Please try again.");
+                showError("Failed to analyze text. Please check your connection and try again.");
             } finally {
                 showLoading(false);
             }
+        }
+
+        function createRadarChart(features) {
+            const labels = Object.keys(features);
+            const values = Object.values(features);
+            
+            const ctx = document.getElementById("featureChart").getContext("2d");
+            
+            if (window.featureRadar) {
+                window.featureRadar.destroy();
+            }
+            
+            window.featureRadar = new Chart(ctx, {
+                type: "radar",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: "Feature Values",
+                        data: values,
+                        backgroundColor: "rgba(102, 126, 234, 0.1)",
+                        borderColor: "rgba(102, 126, 234, 0.8)",
+                        borderWidth: 2,
+                        pointBackgroundColor: "rgba(102, 126, 234, 1)",
+                        pointBorderColor: "#fff",
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: { 
+                                display: true,
+                                color: "rgba(0, 0, 0, 0.1)"
+                            },
+                            grid: {
+                                color: "rgba(0, 0, 0, 0.1)"
+                            },
+                            pointLabels: {
+                                font: {
+                                    size: 11,
+                                    family: "'Inter', sans-serif"
+                                },
+                                color: "#64748b"
+                            },
+                            ticks: {
+                                display: false
+                            },
+                            suggestedMin: 0,
+                        }
+                    }
+                }
+            });
         }
 
         // Allow Enter key to submit (with Ctrl/Cmd)
         document.getElementById("inputText").addEventListener("keydown", function(event) {
             if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
                 event.preventDefault();
-                sendText();
+                submitText();
             }
         });
     </script>
